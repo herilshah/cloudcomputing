@@ -20,7 +20,8 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply --validate=false -f k8s/'
+                // Use your local Docker Desktop cluster
+                sh 'kubectl apply -f k8s/'
             }
         }
     }
