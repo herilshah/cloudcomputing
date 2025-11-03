@@ -40,6 +40,7 @@ services:
       - "9100:9100"
     environment:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - GATEWAY_ALLOWED_ORIGINS=http://localhost:5173
     depends_on:
       - eureka-server
     networks:
@@ -215,6 +216,8 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://apigateway:9100
     container_name: shopsquare-frontend
     ports:
       - "5173:80"

@@ -1,7 +1,7 @@
 // Enhanced API Client with proper service endpoints
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
-const API_BASE_URL = 'http://localhost:9100'; // API Gateway URL
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://localhost:9100';
 
 async function request<T>(path: string, method: HttpMethod, body?: any, headers?: Record<string, string>): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
