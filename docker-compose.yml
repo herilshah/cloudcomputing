@@ -1,18 +1,16 @@
-version: '3.9'
-
 services:
   mysql:
     image: mysql:8.0
     container_name: shopsquare-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: 
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: user_service_db
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -30,6 +28,8 @@ services:
       - "8761:8761"
     networks:
       - shopsquare-network
+    healthcheck:
+      disable: true
 
   apigateway:
     build:
@@ -40,11 +40,17 @@ services:
       - "9100:9100"
     environment:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - GATEWAY_ALLOWED_ORIGINS=http://13.61.1.214:5173
+      - GATEWAY_ALLOWED_ORIGINS=http://localhost:5173
     depends_on:
       - eureka-server
     networks:
       - shopsquare-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9100/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   user-service:
     build:
@@ -54,9 +60,9 @@ services:
     ports:
       - "9101:9101"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/user_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/user_service_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -74,9 +80,9 @@ services:
     ports:
       - "9102:9102"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/shop_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/shop_service_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -94,9 +100,9 @@ services:
     ports:
       - "9103:9103"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/products_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/products_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -114,9 +120,9 @@ services:
     ports:
       - "9104:9104"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cart_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cart_service_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -134,9 +140,9 @@ services:
     ports:
       - "9105:9105"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/order_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/order_service_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -154,9 +160,49 @@ services:
     ports:
       - "9106:9106"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/profile_service_db?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/profile_service_db
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_PASSWORD=
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - shopsquare-network
+
+  cart-item-service:
+    build:
+      context: ./cartitem
+      dockerfile: Dockerfile
+    container_name: shopsquare-cart-item-service
+    ports:
+      - "9107:9107"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cartitem_service_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - shopsquare-network
+
+  order-item-service:
+    build:
+      context: ./orderitem
+      dockerfile: Dockerfile
+    container_name: shopsquare-order-item-service
+    ports:
+      - "9108:9108"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/orderitem_service_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       mysql:
@@ -171,7 +217,7 @@ services:
       context: ./ui
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://13.61.1.214:9100
+        VITE_API_BASE_URL: http://apigateway:9100
     container_name: shopsquare-frontend
     ports:
       - "5173:80"
